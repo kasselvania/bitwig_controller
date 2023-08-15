@@ -1,4 +1,10 @@
 -- BitWig Controller Beta/Early
+local util = require "util"
+local lattice = require "lattice"
+
+function rerun()
+  norns.script.load(norns.state.script)
+end
 
 g = grid.connect()
 dest = {"192.168.5.33", 10101}
@@ -8,7 +14,6 @@ clipID = {}
 trackID = {}
 clip = {}
 bpm = {}
-lattice = require("lattice")
 altView = {}
 
 function init()
@@ -38,6 +43,16 @@ function init()
           end
   end
   
+  globalClock = lattice:new()
+  globalClock:stop()
+  playAnimation = globalClock:new_sprocket()
+  playAnimation:set_division(1/64)
+  playAnimation:set_action(function ()
+    pulseLed(1, 16, globalClock.ppqn / 2, true)
+  end)
+  playAnimation:stop()
+  globalClock:start()
+
   gridDirty = true -- state that runs a grid.redraw()
   
   
@@ -49,27 +64,29 @@ function init()
           grid_redraw()
           gridDirty = false
         end
-      end
+      end 
     end
   )
   osc.send(dest, "/refresh")
-  
-  --lattice setup
-  playAnimation = lattice:new{
-      auto = true,
-    ppqn = 96
-}
 
-sprocket_play = playAnimation:new_sprocket{
-  action = function(bright)
-    bright = bright + 1
-    end,
-    division = 1/16,
-    enabled = true
-}
+  grid_init()
 
-playAnimation:start()
+end
 
+function pulseLed(x, y, scale, direction)
+  local phase = globalClock.transport % scale
+  startValue = 0
+  endValue = 16
+
+  if direction then
+    startValue = 16
+    endValue = 0
+  end
+
+  local ledBrightness = util.round(util.linlin(0, scale, startValue, endValue, phase), 1)
+
+  g:led(x,y, ledBrightness)
+  g:refresh()
 end
 
 function alternateView(x,y,z)
@@ -93,6 +110,7 @@ function g.key(x,y,z)
  alternateView(x,y,z)
  
   if x == 1 then -- This is the trigger for the scenes. grid.redraw() is missing a function to drive a two way LED communication
+    if y <= 14 then
       if z == 1 then
           launch_scene(y)
           scenes[y] = z
@@ -100,30 +118,56 @@ function g.key(x,y,z)
               else
                 scenes[y] = false
       end
-  end
-  
-  
-    if z == 1 and x > 1 and y <= 14 then -- clip launch, may need alternate view factored
-        clipLaunch(x-1,y)
-        print(x-1,y)
-        gridDirty = true
-            else
     end
-    
-    
-    
-  if x == 16 and y == 16 and z == 1 then --scene scroll increase
-      osc.send(dest, "/track/+")
   end
   
+  
+  if z == 1 and x > 1 and y <= 14 then -- clip launch, may need alternate view factored
+      clipLaunch(x-1,y)
+      print(x-1,y)
+      gridDirty = true
+        else
+  end
+
+
+  if altView then
+    processArrowKeysalt(x, y, z)
+  else
+    processArrowKeys(x, y, z)
+  end
+end
+
+function processArrowKeysalt(x, y, z)
+  if x == 16 and y == 16 and z == 1 then --scene scroll increase
+    osc.send(dest, "/track/+")
+  end
+
   if x == 14 and y == 16 and z == 1 then -- scene scroll decrease
       osc.send(dest, "/track/-")
   end
-  
+
   if x == 15 and y == 16 and z == 1 then -- scene scroll increase
       osc.send(dest, "/scene/+")
   end
-  
+
+  if x == 15 and y == 15 and z == 1 then -- scene scroll decrease
+      osc.send(dest, "/scene/-")
+  end
+end
+
+function processArrowKeys(x, y, z)
+  if x == 16 and y == 16 and z == 1 then --scene scroll increase
+    osc.send(dest, "/track/+")
+  end
+
+  if x == 14 and y == 16 and z == 1 then -- scene scroll decrease
+      osc.send(dest, "/track/-")
+  end
+
+  if x == 15 and y == 16 and z == 1 then -- scene scroll increase
+      osc.send(dest, "/scene/+")
+  end
+
   if x == 15 and y == 15 and z == 1 then -- scene scroll decrease
       osc.send(dest, "/scene/-")
   end
@@ -143,12 +187,13 @@ end
   
 
 function playbutton()
-   if transporton == false 
-    then
-      osc.send(dest, "/play/1")
-          else
-              osc.send(dest, "/stop")
-    end
+  if transporton == false then
+    playAnimation:start()
+    osc.send(dest, "/play/1")
+  else
+    playAnimation:stop()
+    osc.send(dest, "/stop")
+  end
 end
 
 
@@ -163,11 +208,11 @@ function osc_in(path, args, from)
       gridDirty = true
   end
   
-local currentBPM = string.find(path, "/tempo/raw")
-    if currentBPM then
-        local bpmarg = tonumber(args[1])
-        bpm = bpmarg
-    end
+-- local currentBPM = string.find(path, "/tempo/raw")
+--     if currentBPM then
+--         local bpmarg = tonumber(args[1])
+--         bpm = bpmarg
+--     end
   
 local pattern = "/track/(%d+)/clip/(%d+)/hasContent"    -- Extract track and clip numbers from the path using pattern matching
     local track, clip = path:match(pattern)
@@ -200,58 +245,48 @@ function processOSCMessage(track, clip, args)
             end
         end
     gridDirty = true
+    -- g:refresh()
 end
 
 
 osc.event = osc_in
 
-function navigationArrow(x,y,z)
-  if g:led(14,16,10) then
-    else
-  end
-  if g:led(15,16,10) then
-    else
-  end
-  if g:led(16,16,10) then
-    else
-  end
-  if g:led(15,15,10) then
-    else
-  end
+function drawNavigationArrows()
+  g:led(14,16,10)
+  g:led(15,16,10)
+  g:led(16,16,10)
+  g:led(15,15,10)
 end
 
-
-      
-
-
- function grid_redraw()
+function grid_init()
   g:all(0)
-  navigationArrow(x,y,val) -- arrow keys
+  g:refresh()
+end
+
+function grid_redraw()
+  drawNavigationArrows() -- arrow keys
    --this idiom makes a compact if/then by checking the boolean state:
    
-  if g:led(1,16,transporton and 15 or 3) then -- if true, use 15. if false, use 3.
-    else
-      end
-  g:refresh()
-   for i = 1,14 do
-   if g:led(1,i,scenes[i] and 15 or 7) then
-   end
-   end
-  for x = 2, 16 do
-        for y = 1, 14 do
-           if g:led(x, y, clipGrid[x][y] and 15 or 1) then
-             else
-             end
-             -- print(clipGrid[x][y])
-        end
+   if g:led(1,16,transporton and 15 or 3) then -- if true, use 15. if false, use 3.
+   else
+     end
+ g:refresh()
+  for i = 1,14 do
+  if g:led(1,i,scenes[i] and 15 or 7) then
   end
-  for x = 11, 12 do
-    if g:led(x,16, altView and 15 or 2) then
-    end
   end
-      
-    
+ for x = 2, 16 do
+       for y = 1, 14 do
+          if g:led(x, y, clipGrid[x][y] and 15 or 1) then
+            else
+            end
+            -- print(clipGrid[x][y])
+       end
+ end
+ for x = 11, 12 do
+   if g:led(x,16, altView and 15 or 2) then
+   end
+ end
 
-  
-g:refresh()
+  g:refresh()
 end
