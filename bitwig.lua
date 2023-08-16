@@ -55,6 +55,8 @@ function init()
   globalClock:start()
 
   gridDirty = true -- state that runs a grid.redraw()
+
+  playAnimation:start()
   
   
   -- hardware_redraw_clock = clock.run( -- not sure about this clock redraw function. I believe this was provided by DDerks and creates the refresh issues when pressing the keys
@@ -78,6 +80,8 @@ function init()
   end
   Grid_Redraw_Metro:start(1/60)
 
+  
+
 
 
   osc.send(dest, "/refresh")
@@ -96,7 +100,7 @@ function pulseLed(x, y, scale, direction)
   ledBrightness = util.round(util.linlin(0, scale, startValue, endValue, phase), 1)
 
   Brightness = ledBrightness
-  print(Brightness)
+  --print(Brightness)
   gridDirty = true
 end
 
@@ -215,11 +219,11 @@ function osc_in(path, args, from)
       if playmsg then
           if args[1] == 1 then
               transporton = true
-              playAnimation:start()
+             -- playAnimation:start()
               
                   elseif args[1] == 0 then
                       transporton = false
-                      playAnimation:stop()
+                      -- playAnimation:stop()
                   end
   end
   
