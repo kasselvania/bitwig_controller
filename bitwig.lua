@@ -15,6 +15,7 @@ trackID = {}
 clip = {}
 bpm = {}
 altView = {}
+Brightness = 0
 
 function init()
   --toggleState = false -- this is for any key that toggles on or off
@@ -56,21 +57,30 @@ function init()
   gridDirty = true -- state that runs a grid.redraw()
   
   
-  hardware_redraw_clock = clock.run( -- not sure about this clock redraw function. I believe this was provided by DDerks and creates the refresh issues when pressing the keys
-    function()
-      while true do
-        clock.sleep(1/60)
-        if gridDirty then
-          grid_redraw()
-          gridDirty = false
-        end
-      end 
+  -- hardware_redraw_clock = clock.run( -- not sure about this clock redraw function. I believe this was provided by DDerks and creates the refresh issues when pressing the keys
+  --   function()
+  --     while true do
+  --       clock.sleep(1/60)
+  --       if gridDirty then
+  --         grid_redraw()
+  --         gridDirty = false
+  --       end
+  --     end 
+  --   end
+  -- )
+
+  Grid_Redraw_Metro = metro.init()
+  Grid_Redraw_Metro.event = function()
+    if gridDirty then
+      grid_redraw()
+      gridDirty = false
     end
-  )
+  end
+  Grid_Redraw_Metro:start(1/60)
+
+
+
   osc.send(dest, "/refresh")
-
-  grid_init()
-
 end
 
 function pulseLed(x, y, scale, direction)
@@ -83,10 +93,11 @@ function pulseLed(x, y, scale, direction)
     endValue = 0
   end
 
-  local ledBrightness = util.round(util.linlin(0, scale, startValue, endValue, phase), 1)
+  ledBrightness = util.round(util.linlin(0, scale, startValue, endValue, phase), 1)
 
-  g:led(x,y, ledBrightness)
-  g:refresh()
+  Brightness = ledBrightness
+  print(Brightness)
+  gridDirty = true
 end
 
 function alternateView(x,y,z)
@@ -112,6 +123,8 @@ function g.key(x,y,z)
   if x == 1 then -- This is the trigger for the scenes. grid.redraw() is missing a function to drive a two way LED communication
     if y <= 14 then
       if z == 1 then
+        transporton = true
+        playbutton()
           launch_scene(y)
           scenes[y] = z
           gridDirty = true
@@ -188,10 +201,10 @@ end
 
 function playbutton()
   if transporton == false then
-    playAnimation:start()
+    -- playAnimation:start()
     osc.send(dest, "/play/1")
   else
-    playAnimation:stop()
+    -- playAnimation:stop()
     osc.send(dest, "/stop")
   end
 end
@@ -202,10 +215,12 @@ function osc_in(path, args, from)
       if playmsg then
           if args[1] == 1 then
               transporton = true
+              playAnimation:start()
+              
                   elseif args[1] == 0 then
                       transporton = false
+                      playAnimation:stop()
                   end
-      gridDirty = true
   end
   
 -- local currentBPM = string.find(path, "/tempo/raw")
@@ -266,11 +281,11 @@ end
 function grid_redraw()
   drawNavigationArrows() -- arrow keys
    --this idiom makes a compact if/then by checking the boolean state:
-   
-   if g:led(1,16,transporton and 15 or 3) then -- if true, use 15. if false, use 3.
+   if transporton == true then
+    g:led(1,16,Brightness)
    else
+    g:led(1,16,3)  -- if true, use 15. if false, use 3.
      end
- g:refresh()
   for i = 1,14 do
   if g:led(1,i,scenes[i] and 15 or 7) then
   end
@@ -287,6 +302,5 @@ function grid_redraw()
    if g:led(x,16, altView and 15 or 2) then
    end
  end
-
-  g:refresh()
+ g:refresh()
 end
