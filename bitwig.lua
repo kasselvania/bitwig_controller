@@ -44,7 +44,7 @@ function init()
           end
   end
   
-  globalClock = lattice:new()
+  globalClock = lattice:new() -- lattice for quarter note based patterns
   globalClock:stop()
   playAnimation = globalClock:new_sprocket()
   playAnimation:set_division(1/64)
@@ -58,7 +58,7 @@ function init()
 
   playAnimation:start()
 
-  Grid_Redraw_Metro = metro.init()
+  Grid_Redraw_Metro = metro.init() -- grid redraw instructions
   Grid_Redraw_Metro.event = function()
     if gridDirty then
       grid_redraw()
@@ -66,15 +66,10 @@ function init()
     end
   end
   Grid_Redraw_Metro:start(1/60)
-
-  
-
-
-
-  osc.send(dest, "/refresh")
+  osc.send(dest, "/refresh") -- flushes all OSC data to script on start.
 end
 
-function pulseLed(x, y, scale, direction)
+function pulseLed(x, y, scale, direction) -- animation sprocket fun by lattice for identifying playing clips and play button
   local phase = globalClock.transport % scale
   startValue = 0
   endValue = 16
@@ -91,7 +86,7 @@ function pulseLed(x, y, scale, direction)
   gridDirty = true
 end
 
-function alternateView(x,y,z)
+function alternateView(x,y,z) -- alt view button function. Currently only toggles variable
   if x == 11 or x == 12 and y == 16 then
       if z ==1 then
         print(x,y)
@@ -103,15 +98,14 @@ function alternateView(x,y,z)
 end
 
 function g.key(x,y,z)
-  if x == 1 and y == 16 and z == 1 then -- this function is the play key, currently, the play state does not update dependent on the OSC data. Only the light.
-    --toggleState = not toggleState -- this idiom flips a boolean to the opposite state
+  if x == 1 and y == 16 and z == 1 then -- this function is the play key 
     toggleState = transporton
     playbutton()
   end
   
  alternateView(x,y,z)
  
-  if x == 1 then -- This is the trigger for the scenes. grid.redraw() is missing a function to drive a two way LED communication
+  if x == 1 then -- This is the trigger for the scenes.
     if y <= 14 then
       if z == 1 then
         -- transporton = true
@@ -134,7 +128,7 @@ function g.key(x,y,z)
   end
 
 
-  if altView then
+  if altView then -- currently, alt arrows bellow are the same.
     processArrowKeysalt(x, y, z)
   else
     processArrowKeys(x, y, z)
@@ -183,19 +177,17 @@ function launch_scene(sceneNumber) -- this is the function that launches scenes.
     end
 end
 
- function clipLaunch(track, clip)
+ function clipLaunch(track, clip) -- clip launching function
             osc.send(dest, "/track/" ..track.. "/clip/" ..clip.. "/launch", {1})
             -- print(clip,track)
   end
 
   
 
-function playbutton()
+function playbutton() -- play button and transporton function
   if transporton == false then
-    -- playAnimation:start()
     osc.send(dest, "/play/1")
   else
-    -- playAnimation:stop()
     osc.send(dest, "/stop")
   end
 end
@@ -206,10 +198,8 @@ function osc_in(path, args, from)
       if playmsg then
           if args[1] == 1 then
               transporton = true
-             -- playAnimation:start()
                   elseif args[1] == 0 then
                       transporton = false
-                      -- playAnimation:stop()
                   end
   end
   
@@ -219,10 +209,10 @@ function osc_in(path, args, from)
 --         bpm = bpmarg
 --     end
   
-local pattern = "/track/(%d+)/clip/(%d+)/hasContent"    -- Extract track and clip numbers from the path using pattern matching
+local pattern = "/track/(%d+)/clip/(%d+)/hasContent"    -- Extract track and clip number for existing clips
     local track, clip = path:match(pattern)
 
-local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying" 
+local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and clip numbers for playing clips
     local trackplay, clipplay = path:match(patternplay)
     
     -- Convert the extracted strings to numbers
@@ -232,19 +222,19 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"
     local trackplayNumber = tonumber(trackplay)
     local clipplayNumber = tonumber(clipplay)
     
-     if trackNumber and clipNumber then
+     if trackNumber and clipNumber then -- pulls track/clip/arguments for existing clips and passes them to function
           -- Call your processing function with the extracted numbers
           --print("Received OSC message for track:", track, "and clip:", clip, "and trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
         processOSCMessageClip(trackNumber, clipNumber, args)
      end
-     if trackplayNumber and clipplayNumber then
+     if trackplayNumber and clipplayNumber then -- pulls track/clip/arguments for playing clips, passes them to function
      processOSCMessagePlay(trackplayNumber, clipplayNumber, args)
      end
 end
 
 
 -- Function to process the extracted track and clip numbers
-function processOSCMessageClip(track, clip, args)
+function processOSCMessageClip(track, clip, args) -- applies OSC info for identifying existing clips
 
      --if track and clip and args [1] then
       --print("Received OSC message for track:", track, "and clip:", clip, "and args:", args [1])
@@ -260,9 +250,9 @@ function processOSCMessageClip(track, clip, args)
    -- g:refresh()
       end
 
-function processOSCMessagePlay(trackplay, clipplay, args)
+function processOSCMessagePlay(trackplay, clipplay, args) -- applies OSC info for identifying playing clips
 -- if trackplay and clipplay and args[1] then
-  print("Received OSC message for trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
+  --print("Received OSC message for trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
   trackplay = trackplay + 1
   if clipplay <= 16 and trackplay <= 16 then
       if args[1] == 1 then
@@ -277,59 +267,61 @@ end
 
 osc.event = osc_in
 
-function drawNavigationArrows()
+function drawNavigationArrows() -- current navigation arrows
   g:led(14,16,10)
   g:led(15,16,10)
   g:led(16,16,10)
   g:led(15,15,10)
 end
 
-function grid_init()
+function grid_init() -- initial grid initiation. Should be envoked when swapping between altviews
   g:all(0)
   g:refresh()
 end
 
 function grid_redraw()
   drawNavigationArrows() -- arrow keys
-   --this idiom makes a compact if/then by checking the boolean state:
-   if transporton == true then
-    g:led(1,16,Brightness)
-   else
-    g:led(1,16,3)  -- if true, use 15. if false, use 3.
-     end
-     if transporton == true then
-      for x = 2,16 do
-        for y = 1,14 do
-          if clipPlay[x][y] == true then
-          g:led(x,y,Brightness)
-          end
-        end
-      end
-        end
-     
-  for i = 1,14 do
-  if g:led(1,i,scenes[i] and 15 or 7) then
-  end
-  end
- for x = 2, 16 do
-       for y = 1, 14 do
-        if clipGrid[x][y] == true then
-          if clipPlay[x][y] == false then
-              g:led(x,y,15)
-          end
-              end
-              if clipGrid[x][y] == false then
-                if clipPlay[x][y] == false then
-                  g:led(x,y,3)
+
+
+   if transporton == true then -- play button
+      g:led(1,16,Brightness)
+        else
+            g:led(1,16,3)  -- if true, use 15. if false, use 3.
+    end
+
+    if transporton == true then -- clip playing drawing/animation
+        for x = 2,16 do
+            for y = 1,14 do
+                if clipPlay[x][y] == true then
+                    g:led(x,y,Brightness)
                 end
+            end
+        end
+    end
+     
+  for i = 1,14 do -- scene drawing
+     g:led(1,i,scenes[i] and 15 or 7)
+  end
+
+ for x = 2, 16 do -- clip exist drawing/population
+      for y = 1, 14 do
+          if clipGrid[x][y] == true then
+              if clipPlay[x][y] == false then
+                  g:led(x,y,15)
+              end
+          end
+              if clipGrid[x][y] == false then
+                  if clipPlay[x][y] == false then
+                      g:led(x,y,3)
+                  end
               end
             --print(clipGrid[x][y])
-       end
+      end
       
- for x = 11, 12 do
-   if g:led(x,16, altView and 15 or 2) then
-   end
- end
- g:refresh()
+    for x = 11, 12 do -- altView toggle button
+        g:led(x,16, altView and 15 or 2)
+    end
+  end
+      g:refresh()
 end
-end
+
