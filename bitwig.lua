@@ -15,6 +15,7 @@ trackID = {}
 clipPlay = {}
 bpm = {}
 altView = {}
+tracktype = {}
 Brightness = 0
 
 function init()
@@ -28,6 +29,7 @@ function init()
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
+      tracktype[i] = false
   end
       for i = 1,14 do
          scenes[i] = false -- assigns a value to the scenes. This table is aligned to [1,14]
@@ -214,6 +216,9 @@ local pattern = "/track/(%d+)/clip/(%d+)/hasContent"    -- Extract track and cli
 
 local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and clip numbers for playing clips
     local trackplay, clipplay = path:match(patternplay)
+
+local groupid = "/track/(%d+)/type"
+    local trackgroup = path:match(groupid)
     
     -- Convert the extracted strings to numbers
 
@@ -221,6 +226,12 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and cl
     local clipNumber = tonumber(clip)
     local trackplayNumber = tonumber(trackplay)
     local clipplayNumber = tonumber(clipplay)
+    local trackgroup = tonumber(folder)
+
+    if trackgroup then
+      processOSCMessageGroup(trackgroup, args)
+      print("Received OSC message for track:", track, "type ", args[1])
+    end
     
      if trackNumber and clipNumber then -- pulls track/clip/arguments for existing clips and passes them to function
           -- Call your processing function with the extracted numbers
@@ -232,6 +243,18 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and cl
      end
 end
 
+function processOSCMessageGroup(track, args)
+  trackgroup = trackgroup + 1
+    if trackgroup <= 16 then
+      if args[1] == {group} then
+      trackID = true
+      print("group")
+    elseif args[1] ~= {group} then
+      trackID = false
+    end
+  end
+  gridDirty = true
+end
 
 -- Function to process the extracted track and clip numbers
 function processOSCMessageClip(track, clip, args) -- applies OSC info for identifying existing clips
@@ -324,4 +347,3 @@ function grid_redraw()
   end
       g:refresh()
 end
-
