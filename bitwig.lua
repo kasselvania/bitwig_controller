@@ -57,19 +57,6 @@ function init()
   gridDirty = true -- state that runs a grid.redraw()
 
   playAnimation:start()
-  
-  
-  -- hardware_redraw_clock = clock.run( -- not sure about this clock redraw function. I believe this was provided by DDerks and creates the refresh issues when pressing the keys
-  --   function()
-  --     while true do
-  --       clock.sleep(1/60)
-  --       if gridDirty then
-  --         grid_redraw()
-  --         gridDirty = false
-  --       end
-  --     end 
-  --   end
-  -- )
 
   Grid_Redraw_Metro = metro.init()
   Grid_Redraw_Metro.event = function()
@@ -245,14 +232,6 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"
     local trackplayNumber = tonumber(trackplay)
     local clipplayNumber = tonumber(clipplay)
     
-    -- Check if numbers were extracted successfully
-    --if trackplayNumber and clipplayNumber and args[1] == 1 then
-      --processOSCMessage(clipplayNumber, trackplayNumber, args)
-     -- print("Received OSC message for trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
-      --elseif trackNumber and clipNumber then
-     -- print("Received OSC message for track:", track, "and clip:", clip, "and args:", args [1])
-      --processOSCMessage(trackNumber, clipNumber, args)
-  --end
      if trackNumber and clipNumber then
           -- Call your processing function with the extracted numbers
           --print("Received OSC message for track:", track, "and clip:", clip, "and trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
@@ -261,28 +240,6 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"
      if trackplayNumber and clipplayNumber then
      processOSCMessagePlay(trackplayNumber, clipplayNumber, args)
      end
-        --processOSCMessagePlay(trackplayNumber, clipplayNumber, args)
-           --print("Received OSC message for track:", track, "and clip:", clip, "and trackplay", trackplay, "and clipplay", clipplay, "and args:", args [1])
-      
-        -- print("Could not extract track and clip numbers from:", path)
-
-    -- local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying" 
-    -- local trackplay, clipplay = path:match(patternplay)
-    
-  -- Convert the extracted strings to numbers
-
-  -- local trackplayNumber = tonumber(trackplay)
-  -- local clipplayNumber = tonumber(clipplay)
-  
-  -- Check if numbers were extracted successfully
- -- if trackplayNumber and clipplayNumber then
-        -- Call your processing function with the extracted numbers
-      -- processOSCMessage(trackNumber, clipNumber, args)
-         --print("Received OSC message for trackplay:", trackplay, "and clipplay:", clipplay, "and args:", args[1])
-    -- else
-      -- print("Could not extract track and clip numbers from:", path)
-  -- end
---end  -- Extract track and clip numbers from the path using pattern matching
 end
 
 
