@@ -108,6 +108,9 @@ function g.key(x,y,z)
     toggleState = transporton
     playbutton()
   end
+  if x == 2 and y == 16 and z == 1 then
+    osc.send(dest,"/clip/stopall")
+  end
   
  alternateView(x,y,z)
  
@@ -336,13 +339,26 @@ function grid_init() -- initial grid initiation. Should be envoked when swapping
   g:refresh()
 end
 
+-- function trackselected()
+--   for x = 2,16 do
+--     for y = 1,14 do
+--       if selectedtrack [x][y] = true then
+--         if clipGrid[x][y] = true then
+--           g:led(x,y,10)
+--         else
+--           g:led(x,y,1)
+--         end
+--       end
+--     end
+--   end
+-- end
 
 function clipdraw ()
 
     for x = 2,16 do
       for y= 1,14 do 
         if tracktype[x][y] == true then
-        g:led(x,y,4)
+        g:led(x,y,7)
         end
       end
     end
@@ -359,20 +375,40 @@ function clipdraw ()
     end
 
     for x = 2, 16 do -- clip exist drawing/population
- 
           for y = 1, 14 do
+            if selectedtrack[x][y] == true then
               if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
                      if tracktype[x][y] == false then
-                      g:led(x,y,12)
+                      g:led(x,y,15)
                   end
               end
             end
+          end
+            if selectedtrack[x][y] == false then
+              if clipGrid[x][y] == true then
+                  if clipPlay[x][y] == false then
+                     if tracktype[x][y] == false then
+                      g:led(x,y,10)
+                  end
+              end
+            end
+          end
+                if selectedtrack[x][y] == true then
                   if clipGrid[x][y] == false then
                       if clipPlay[x][y] == false then
                          if tracktype[x][y] == false then
-                          g:led(x,y,2)
-                        
+                          g:led(x,y,5)
+                        end
+                      end
+                    end
+                  end
+                  if selectedtrack[x][y] == false then
+                    if clipGrid[x][y] == false then
+                        if clipPlay[x][y] == false then
+                           if tracktype[x][y] == false then
+                            g:led(x,y,2)
+                          end
                         end
                       end
                     end
@@ -380,7 +416,6 @@ function clipdraw ()
           end
       end
     end
-
 
 function grid_redraw()
   drawNavigationArrows() -- arrow keys
@@ -393,32 +428,6 @@ function grid_redraw()
     end
 
   clipdraw()
-
---     if transporton == true then -- clip playing drawing/animation
---         for x = 2,16 do
---             for y = 1,14 do
---                 if clipPlay[x][y] == true then
---                     g:led(x,y,Brightness)
---                 end
---             end
---         end
---     end
-
---  for x = 2, 16 do -- clip exist drawing/population
---       for y = 1, 14 do
---           if clipGrid[x][y] == true then
---               if clipPlay[x][y] == false then
---                   g:led(x,y,15)
---               end
---           end
---               if clipGrid[x][y] == false then
---                   if clipPlay[x][y] == false then
---                       g:led(x,y,3)
---                   end
---               end
---             --print(clipGrid[x][y])
---       end
---   end
 
     for i = 1,14 do -- scene drawing
         g:led(1,i,scenes[i] and 15 or 15)
