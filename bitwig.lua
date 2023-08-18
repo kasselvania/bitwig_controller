@@ -17,6 +17,7 @@ bpm = {}
 altView = {}
 tracktype = {}
 selectedtrack = {}
+armedtracktable = {}
 Brightness = 0
 
 function init()
@@ -42,11 +43,13 @@ function init()
       tracktype[x] = {}
       clipGrid[x] = {}
       clipPlay [x] = {}
+      armedtracktable[x] = {}
           for y = 1,16 do -- for each y-row (8 on a 128-sized grid)...
               selectedtrack[x][y] = false
               tracktype[x][y] = false
               clipGrid[x][y] = false
               clipPlay[x][y] = false
+              armedtracktable[x][y] = false
           end
   end
   
@@ -228,8 +231,11 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and cl
 local groupid = "/track/(%d+)/type"
     local folder = path:match(groupid)
 
-    local trackselected = "/track/(%d+)/selected"
+local trackselected = "/track/(%d+)/selected"
     local selected = path:match(trackselected)
+
+local trackarmed = "/track/(%d+)/recarm"
+    local isArmed = path:match(trackarmed)
     
     -- Convert the extracted strings to numbers
 
@@ -239,6 +245,7 @@ local groupid = "/track/(%d+)/type"
     local clipplayNumber = tonumber(clipplay)
     local trackgroup = tonumber(folder)
     local trackselectNumber  = tonumber(selected)
+    local armedTrackNumber = tonumber(isArmed)
 
     if trackgroup then
       --print("Received OSC message for track:", folder, "type ", args[1])
@@ -258,6 +265,11 @@ local groupid = "/track/(%d+)/type"
      if trackplayNumber and clipplayNumber then -- pulls track/clip/arguments for playing clips, passes them to function
      processOSCMessagePlay(trackplayNumber, clipplayNumber, args)
      end
+
+     if armedTrackNumber then
+      processOSCMessageTrackArm(armedTrackNumber, args, armedscene)
+      -- print("I see armed track:", armedTrackNumber, args[1])
+     end
 end
 
 function processOSCMessageSelectedTrack(selectedTrack, args, scene)
@@ -270,6 +282,21 @@ function processOSCMessageSelectedTrack(selectedTrack, args, scene)
         selectedtrack[selectedTrack][scene] = false
       end
 
+      end
+    end
+    gridDirty = true
+  end
+
+  function processOSCMessageTrackArm(armedTrackNumber, args, armedscene)
+    armedTrackNumber = armedTrackNumber + 1
+    if armedTrackNumber <= 16 then
+      for armedscene = 1,16 do
+        if args[1] == 1 then
+          armedtracktable[armedTrackNumber][armedscene] = true
+         --print("Received OSC message for track:", armedTrackNumber)
+        elseif args[1] == 0 then
+          armedtracktable[armedTrackNumber][armedscene] = false
+        end
       end
     end
     gridDirty = true
@@ -376,42 +403,74 @@ function clipdraw ()
 
     for x = 2, 16 do -- clip exist drawing/population
           for y = 1, 14 do
-            if selectedtrack[x][y] == true then
+            if selectedtrack[x][y] == true then -- populated clip brightness when track is selected
               if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
                      if tracktype[x][y] == false then
+                      if armedtracktable[x][y] == false then
                       g:led(x,y,15)
+                      end
                   end
               end
             end
           end
-            if selectedtrack[x][y] == false then
+            if selectedtrack[x][y] == false then -- populated clips when NOT selected
               if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
                      if tracktype[x][y] == false then
+                      if armedtracktable[x][y] == false then
                       g:led(x,y,10)
+                      end
                   end
               end
             end
           end
-                if selectedtrack[x][y] == true then
+                if selectedtrack[x][y] == true then -- unpopulated/unarmed clip when selected
                   if clipGrid[x][y] == false then
                       if clipPlay[x][y] == false then
                          if tracktype[x][y] == false then
-                          g:led(x,y,5)
-                        end
-                      end
-                    end
-                  end
-                  if selectedtrack[x][y] == false then
-                    if clipGrid[x][y] == false then
-                        if clipPlay[x][y] == false then
-                           if tracktype[x][y] == false then
-                            g:led(x,y,2)
+                          if armedtracktable[x][y] == false then
+                          g:led(x,y,4)
                           end
                         end
                       end
                     end
+                  end
+
+                  if selectedtrack[x][y] == true then -- unpopulated/armed clip when selected
+                    if clipGrid[x][y] == false then
+                        if clipPlay[x][y] == false then
+                           if tracktype[x][y] == false then
+                            if armedtracktable[x][y] == true then
+                            g:led(x,y,6)
+                            end
+                          end
+                        end
+                      end
+                    end
+                  if selectedtrack[x][y] == false then -- unpopulated/unarmed clip brightness when unselected
+                    if clipGrid[x][y] == false then
+                        if clipPlay[x][y] == false then
+                           if tracktype[x][y] == false then
+                            if armedtracktable[x][y] == false then
+                            g:led(x,y,0)
+                            end
+                          end
+                        end
+                      end
+                    end
+
+                    if selectedtrack[x][y] == false then -- unpopulated/armed clip brightness when unselected
+                      if clipGrid[x][y] == false then
+                          if clipPlay[x][y] == false then
+                             if tracktype[x][y] == false then
+                              if armedtracktable[x][y] == true then
+                              g:led(x,y,2)
+                              end
+                            end
+                          end
+                        end
+                      end
             --print(clipGrid[x][y])
           end
       end
