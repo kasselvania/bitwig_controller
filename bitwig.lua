@@ -29,7 +29,6 @@ function init()
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
-      tracktype[i] = false
   end
       for i = 1,14 do
          scenes[i] = false -- assigns a value to the scenes. This table is aligned to [1,14]
@@ -38,9 +37,11 @@ function init()
   
     -- this initalizes the clipGrid variable to be a 2d array of size 16,8 with each value in the array being [0, 0]
   for x = 1,16 do -- for each x-column (16 on a 128-sized grid)...
+      tracktype = {}
       clipGrid[x] = {}
       clipPlay [x] = {}
           for y = 1,16 do -- for each y-row (8 on a 128-sized grid)...
+              tracktype[x] = false
               clipGrid[x][y] = false
               clipPlay[x][y] = false
           end
@@ -177,6 +178,7 @@ function launch_scene(sceneNumber) -- this is the function that launches scenes.
       if scenes[sceneNumber] == false then
         osc.send(dest, "/scene/" ..sceneNumber.. "/launch")
     end
+    gridDirty = true
 end
 
  function clipLaunch(track, clip) -- clip launching function
@@ -218,7 +220,7 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and cl
     local trackplay, clipplay = path:match(patternplay)
 
 local groupid = "/track/(%d+)/type"
-    local trackgroup = path:match(groupid)
+    local folder = path:match(groupid)
     
     -- Convert the extracted strings to numbers
 
@@ -229,8 +231,8 @@ local groupid = "/track/(%d+)/type"
     local trackgroup = tonumber(folder)
 
     if trackgroup then
+      --print("Received OSC message for track:", folder, "type ", args[1])
       processOSCMessageGroup(trackgroup, args)
-      print("Received OSC message for track:", track, "type ", args[1])
     end
     
      if trackNumber and clipNumber then -- pulls track/clip/arguments for existing clips and passes them to function
@@ -243,16 +245,20 @@ local groupid = "/track/(%d+)/type"
      end
 end
 
-function processOSCMessageGroup(track, args)
-  trackgroup = trackgroup + 1
-    if trackgroup <= 16 then
-      if args[1] == {group} then
-      trackID = true
-      print("group")
-    elseif args[1] ~= {group} then
-      trackID = false
-    end
+function processOSCMessageGroup(folder, args)
+  --print("got it")
+  folder = folder + 1
+      if folder <= 16 then
+        for y = 1,16 do
+          if args[1] == "group" then
+             tracktype[folder] = true
+              print(folder)
+          elseif args[1] ~= "group" then
+             -- tracktype[folder][y] = false
+          end
+      end
   end
+  --print(tracktype)
   gridDirty = true
 end
 
@@ -302,14 +308,15 @@ function grid_init() -- initial grid initiation. Should be envoked when swapping
   g:refresh()
 end
 
-function grid_redraw()
-  drawNavigationArrows() -- arrow keys
 
+function clipdraw ()
 
-   if transporton == true then -- play button
-      g:led(1,16,Brightness)
-        else
-            g:led(1,16,3)  -- if true, use 15. if false, use 3.
+    for x = 2,16 do
+      for y= 1,14 do 
+        if tracktype[x] == true then
+        g:led(x,y,5)
+        end
+      end
     end
 
     if transporton == true then -- clip playing drawing/animation
@@ -320,30 +327,76 @@ function grid_redraw()
                 end
             end
         end
+        gridDirty = true
     end
-     
-  for i = 1,14 do -- scene drawing
-     g:led(1,i,scenes[i] and 15 or 7)
-  end
 
- for x = 2, 16 do -- clip exist drawing/population
-      for y = 1, 14 do
-          if clipGrid[x][y] == true then
-              if clipPlay[x][y] == false then
-                  g:led(x,y,15)
-              end
-          end
-              if clipGrid[x][y] == false then
+    for x = 2, 16 do -- clip exist drawing/population
+ 
+          for y = 1, 14 do
+              if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
-                      g:led(x,y,3)
+                    -- if tracktype[x][y] == false then
+                      g:led(x,y,15)
+                     
                   end
               end
+                  if clipGrid[x][y] == false then
+                      if clipPlay[x][y] == false then
+                        -- if tracktype[x][y] == false then
+                          g:led(x,y,3)
+                        
+                        end
+                      end
+                    end
             --print(clipGrid[x][y])
+          end
       end
+
+
+function grid_redraw()
+  drawNavigationArrows() -- arrow keys
+
+
+   if transporton == true then -- play button
+      g:led(1,16,Brightness)
+        else
+            g:led(1,16,3)  -- if true, use 15. if false, use 3.
+    end
+
+  clipdraw()
+
+--     if transporton == true then -- clip playing drawing/animation
+--         for x = 2,16 do
+--             for y = 1,14 do
+--                 if clipPlay[x][y] == true then
+--                     g:led(x,y,Brightness)
+--                 end
+--             end
+--         end
+--     end
+
+--  for x = 2, 16 do -- clip exist drawing/population
+--       for y = 1, 14 do
+--           if clipGrid[x][y] == true then
+--               if clipPlay[x][y] == false then
+--                   g:led(x,y,15)
+--               end
+--           end
+--               if clipGrid[x][y] == false then
+--                   if clipPlay[x][y] == false then
+--                       g:led(x,y,3)
+--                   end
+--               end
+--             --print(clipGrid[x][y])
+--       end
+--   end
+
+    for i = 1,14 do -- scene drawing
+        g:led(1,i,scenes[i] and 15 or 7)
+    end
       
     for x = 11, 12 do -- altView toggle button
         g:led(x,16, altView and 15 or 2)
     end
-  end
       g:refresh()
 end
