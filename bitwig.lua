@@ -16,6 +16,7 @@ clipPlay = {}
 bpm = {}
 altView = {}
 tracktype = {}
+selectedtrack = {}
 Brightness = 0
 
 function init()
@@ -37,10 +38,12 @@ function init()
   
     -- this initalizes the clipGrid variable to be a 2d array of size 16,8 with each value in the array being [0, 0]
   for x = 1,16 do -- for each x-column (16 on a 128-sized grid)...
+    selectedtrack[x] = {}
       tracktype[x] = {}
       clipGrid[x] = {}
       clipPlay [x] = {}
           for y = 1,16 do -- for each y-row (8 on a 128-sized grid)...
+              selectedtrack[x][y] = false
               tracktype[x][y] = false
               clipGrid[x][y] = false
               clipPlay[x][y] = false
@@ -221,6 +224,9 @@ local patternplay = "/track/(%d+)/clip/(%d+)/isPlaying"  -- Extract track and cl
 
 local groupid = "/track/(%d+)/type"
     local folder = path:match(groupid)
+
+    local trackselected = "/track/(%d+)/selected"
+    local selected = path:match(trackselected)
     
     -- Convert the extracted strings to numbers
 
@@ -229,10 +235,16 @@ local groupid = "/track/(%d+)/type"
     local trackplayNumber = tonumber(trackplay)
     local clipplayNumber = tonumber(clipplay)
     local trackgroup = tonumber(folder)
+    local trackselectNumber  = tonumber(selected)
 
     if trackgroup then
       --print("Received OSC message for track:", folder, "type ", args[1])
-      processOSCMessageGroup(trackgroup, args, groupIndex)
+      processOSCMessageGroup(trackgroup, args, groupIndex) -- Process any tracks that are folders
+    end
+
+    if trackselectNumber then
+       --print("Received OSC message for selected track:", selected, "number ", args[1])
+      processOSCMessageSelectedTrack(trackselectNumber, args, trackselect)
     end
     
      if trackNumber and clipNumber then -- pulls track/clip/arguments for existing clips and passes them to function
@@ -245,18 +257,33 @@ local groupid = "/track/(%d+)/type"
      end
 end
 
-function processOSCMessageGroup(folder, args, scenes)
+function processOSCMessageSelectedTrack(selectedTrack, args, scene)
+  selectedTrack = selectedTrack + 1
+    if selectedTrack <= 16 then
+      for scene = 1,16 do
+        if args[1] == 1 then
+        selectedtrack[selectedTrack][scene] = true
+      elseif args[1] == 0 then
+        selectedtrack[selectedTrack][scene] = false
+      end
+
+      end
+    end
+    gridDirty = true
+  end
+
+function processOSCMessageGroup(folder, args, scenes) -- tags whether or not a track is a folder/group or not
   --print("got it")
   folder = folder + 1
       if folder <= 16 then
         for scenes = 1,16 do
           if args[1] == "group" then
              tracktype[folder][scenes] = true
-              print(folder)
+              -- print(folder)
           elseif args[1] ~= "group" then
              tracktype[folder][scenes] = false
           end
-          print(i)
+          -- print(i)
         end
     end
   --print(tracktype)
@@ -315,7 +342,7 @@ function clipdraw ()
     for x = 2,16 do
       for y= 1,14 do 
         if tracktype[x][y] == true then
-        g:led(x,y,5)
+        g:led(x,y,4)
         end
       end
     end
@@ -337,8 +364,7 @@ function clipdraw ()
               if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
                      if tracktype[x][y] == false then
-                      g:led(x,y,11)
-                     
+                      g:led(x,y,12)
                   end
               end
             end
