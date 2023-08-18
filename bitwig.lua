@@ -37,11 +37,11 @@ function init()
   
     -- this initalizes the clipGrid variable to be a 2d array of size 16,8 with each value in the array being [0, 0]
   for x = 1,16 do -- for each x-column (16 on a 128-sized grid)...
-      tracktype = {}
+      tracktype[x] = {}
       clipGrid[x] = {}
       clipPlay [x] = {}
           for y = 1,16 do -- for each y-row (8 on a 128-sized grid)...
-              tracktype[x] = false
+              tracktype[x][y] = false
               clipGrid[x][y] = false
               clipPlay[x][y] = false
           end
@@ -232,7 +232,7 @@ local groupid = "/track/(%d+)/type"
 
     if trackgroup then
       --print("Received OSC message for track:", folder, "type ", args[1])
-      processOSCMessageGroup(trackgroup, args)
+      processOSCMessageGroup(trackgroup, args, groupIndex)
     end
     
      if trackNumber and clipNumber then -- pulls track/clip/arguments for existing clips and passes them to function
@@ -245,19 +245,20 @@ local groupid = "/track/(%d+)/type"
      end
 end
 
-function processOSCMessageGroup(folder, args)
+function processOSCMessageGroup(folder, args, scenes)
   --print("got it")
   folder = folder + 1
       if folder <= 16 then
-        for y = 1,16 do
+        for scenes = 1,16 do
           if args[1] == "group" then
-             tracktype[folder] = true
+             tracktype[folder][scenes] = true
               print(folder)
           elseif args[1] ~= "group" then
-             -- tracktype[folder][y] = false
+             tracktype[folder][scenes] = false
           end
-      end
-  end
+          print(i)
+        end
+    end
   --print(tracktype)
   gridDirty = true
 end
@@ -313,7 +314,7 @@ function clipdraw ()
 
     for x = 2,16 do
       for y= 1,14 do 
-        if tracktype[x] == true then
+        if tracktype[x][y] == true then
         g:led(x,y,5)
         end
       end
@@ -335,15 +336,16 @@ function clipdraw ()
           for y = 1, 14 do
               if clipGrid[x][y] == true then
                   if clipPlay[x][y] == false then
-                    -- if tracktype[x][y] == false then
-                      g:led(x,y,15)
+                     if tracktype[x][y] == false then
+                      g:led(x,y,11)
                      
                   end
               end
+            end
                   if clipGrid[x][y] == false then
                       if clipPlay[x][y] == false then
-                        -- if tracktype[x][y] == false then
-                          g:led(x,y,3)
+                         if tracktype[x][y] == false then
+                          g:led(x,y,2)
                         
                         end
                       end
@@ -351,6 +353,7 @@ function clipdraw ()
             --print(clipGrid[x][y])
           end
       end
+    end
 
 
 function grid_redraw()
@@ -392,7 +395,7 @@ function grid_redraw()
 --   end
 
     for i = 1,14 do -- scene drawing
-        g:led(1,i,scenes[i] and 15 or 7)
+        g:led(1,i,scenes[i] and 15 or 15)
     end
       
     for x = 11, 12 do -- altView toggle button
