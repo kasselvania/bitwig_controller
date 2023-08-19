@@ -29,6 +29,7 @@ function init()
   transporton = false -- This tracks the projects transport state, and will apply a LED state dependant on the incoming OSC messages
   altView = false -- This starts the script in Session View
   trackarmed = false -- toggle for checking if selected track is armed
+  globalRecordArm = false -- toggles global record for project
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
@@ -114,7 +115,7 @@ function g.key(x,y,z)
     playbutton()
   end
 
-  if x == 8 and y == 16 and z == 1 then
+  if x == 4 and y == 16 and z == 1 then -- key to arm and unarm tracks. Also displays state of track.
     if trackarmed == true then
       osc.send(dest, "/track/selected/recarm", {0})
     else osc.send(dest, "/track/selected/recarm", {1})
@@ -122,11 +123,18 @@ function g.key(x,y,z)
     gridDirty = true
   end
 
-  local down_time = 0
+  if x == 3 and y == 16 and z == 1 then -- key to arm and disarm global record
+    if globalRecordArm == true then
+      osc.send(dest, "/record")
+    else osc.send(dest, "/record")
+    end
+    gridDirty = true
+  end
+
   
-  if x == 2 and y == 16 and z == 1 then -- stops all
-          osc.send(dest,"/clip/stopall")
-      end
+  -- if x == 2 and y == 16 and z == 1 then -- stops all
+  --         osc.send(dest,"/clip/stopall")
+  --     end
   
 
   
@@ -230,14 +238,23 @@ function osc_in(path, args, from)
                       transporton = false
                   end
   end
-  local trackselectedArmed = string.find(path, "/track/selected/recarm")
+  local trackselectedArmed = string.find(path, "/track/selected/recarm") -- pulls state of track arm from OSC
       if trackselectedArmed then
         if args[1] == 1 then
           trackarmed = true
-          print("armed")
+          --print("armed")
         elseif args[1] == 0 then
           trackarmed = false
-          print("unarmed")
+          --print("unarmed")
+        end
+      end
+
+  local trackRecordState = string.find(path, "/record") -- pulls state of global reecord from OSC
+      if trackRecordState then
+        if args[1] == 1 then
+          globalRecordArm = true
+        elseif args[1] == 0 then
+          globalRecordArm = false
         end
       end
 
@@ -375,6 +392,7 @@ function processOSCMessagePlay(trackplay, clipplay, args) -- applies OSC info fo
           clipPlay[trackplay][clipplay] = false
       end
   end
+  gridDirty = true
 end
 
 
@@ -513,16 +531,23 @@ function grid_redraw()
             g:led(1,16,3)  -- if true, use 15. if false, use 3.
     end
 
+    if globalRecordArm == true then -- record button
+      g:led(3,16,Brightness)
+    else
+      g:led(3,16,4)
+    end
+
+
   clipdraw()
 
     for i = 1,14 do -- scene drawing
         g:led(1,i,scenes[i] and 15 or 15)
     end
 
-    if trackarmed == false then
-      g:led(8,16,4)
+    if trackarmed == false then -- track arm key
+      g:led(4,16,4)
     else
-      g:led(8,16,9)
+      g:led(4,16,9)
     end
       
     for x = 11, 12 do -- altView toggle button
