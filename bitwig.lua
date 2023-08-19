@@ -28,6 +28,7 @@ function init()
   scenes = {} -- this holds a table of the available scenes, and assigns them to the appropriate key for launching. It currently does not track the play state
   transporton = false -- This tracks the projects transport state, and will apply a LED state dependant on the incoming OSC messages
   altView = false -- This starts the script in Session View
+  trackarmed = false -- toggle for checking if selected track is armed
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
@@ -107,13 +108,27 @@ function alternateView(x,y,z) -- alt view button function. Currently only toggle
 end
 
 function g.key(x,y,z)
-  if x == 1 and y == 16 and z == 1 then -- this function is the play key 
+
+  if x == 1 and y == 16 and z == 1 then -- this function is the play key
     toggleState = transporton
     playbutton()
   end
-  if x == 2 and y == 16 and z == 1 then
-    osc.send(dest,"/clip/stopall")
+
+  if x == 8 and y == 16 and z == 1 then
+    if trackarmed == true then
+      osc.send(dest, "/track/selected/recarm", {0})
+    else osc.send(dest, "/track/selected/recarm", {1})
+    end
+    gridDirty = true
   end
+
+  local down_time = 0
+  
+  if x == 2 and y == 16 and z == 1 then -- stops all
+          osc.send(dest,"/clip/stopall")
+      end
+  
+
   
  alternateView(x,y,z)
  
@@ -215,6 +230,17 @@ function osc_in(path, args, from)
                       transporton = false
                   end
   end
+  local trackselectedArmed = string.find(path, "/track/selected/recarm")
+      if trackselectedArmed then
+        if args[1] == 1 then
+          trackarmed = true
+          print("armed")
+        elseif args[1] == 0 then
+          trackarmed = false
+          print("unarmed")
+        end
+      end
+
   
 -- local currentBPM = string.find(path, "/tempo/raw")
 --     if currentBPM then
@@ -236,6 +262,7 @@ local trackselected = "/track/(%d+)/selected"
 
 local trackarmed = "/track/(%d+)/recarm"
     local isArmed = path:match(trackarmed)
+
     
     -- Convert the extracted strings to numbers
 
@@ -490,6 +517,12 @@ function grid_redraw()
 
     for i = 1,14 do -- scene drawing
         g:led(1,i,scenes[i] and 15 or 15)
+    end
+
+    if trackarmed == false then
+      g:led(8,16,4)
+    else
+      g:led(8,16,9)
     end
       
     for x = 11, 12 do -- altView toggle button
