@@ -18,6 +18,9 @@ altView = {}
 tracktype = {}
 selectedtrack = {}
 armedtracktable = {}
+toggled = {}
+counter = {}
+
 Brightness = 0
 
 function init()
@@ -30,6 +33,8 @@ function init()
   altView = false -- This starts the script in Session View
   trackarmed = false -- toggle for checking if selected track is armed
   globalRecordArm = false -- toggles global record for project
+  mute_screen = false
+  mute_counter = {}
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
@@ -46,12 +51,16 @@ function init()
       clipGrid[x] = {}
       clipPlay [x] = {}
       armedtracktable[x] = {}
+      toggled[x] = {}
+      counter[x] = {}
           for y = 1,16 do -- for each y-row (8 on a 128-sized grid)...
               selectedtrack[x][y] = false
               tracktype[x][y] = false
               clipGrid[x][y] = false
               clipPlay[x][y] = false
               armedtracktable[x][y] = false
+              toggled[x][y] = false
+              counter[x][y] = false
           end
   end
   
@@ -77,8 +86,11 @@ function init()
     end
   end
   Grid_Redraw_Metro:start(1/60)
+
   osc.send(dest, "/refresh") -- flushes all OSC data to script on start.
 end
+
+
 
 function pulseLed(x, y, scale, direction) -- animation sprocket fun by lattice for identifying playing clips and play button
   local phase = globalClock.transport % scale
@@ -108,7 +120,44 @@ function alternateView(x,y,z) -- alt view button function. Currently only toggle
   gridDirty = true
 end
 
+function mute_hold()
+  clock.sleep(2)
+      mute_held = true
+      print("mute was held")
+        -- mute_setup()
+        mute_count = nil
+    end
+
+function mute_tap()
+  print("I was tapped")
+      mute_held = false
+      --     mute_setup()
+ end
+
+-- function mute_setup(x,y,z)
+--   if mute_held == false and x == 6 and y == 16 and z == 0 then
+--   mute_screen = true
+--   print("I'm in locked mute screen")
+--     else mute_screen = false
+--       print("I was tapped")
+--     end
+--   end
+
+  
+
 function g.key(x,y,z)
+
+  if x == 6 and y == 16 and z == 1 then -- if a grid key is pressed...
+    mute_counter = clock.run(mute_hold) -- start the long press counter for that coordinate!
+  elseif z == 0 then -- otherwise, if a grid key is released...
+    if mute_counter then -- and the long press is still waiting...
+      clock.cancel(mute_counter) -- then cancel the long press clock,
+      if mute_held == true then
+      else
+      mute_tap() -- and execute a short press instead.
+      end
+    end
+  end
 
   if x == 1 and y == 16 and z == 1 then -- this function is the play key
     toggleState = transporton
@@ -130,13 +179,6 @@ function g.key(x,y,z)
     end
     gridDirty = true
   end
-
-  
-  -- if x == 2 and y == 16 and z == 1 then -- stops all
-  --         osc.send(dest,"/clip/stopall")
-  --     end
-  
-
   
  alternateView(x,y,z)
  
@@ -553,5 +595,15 @@ function grid_redraw()
     for x = 11, 12 do -- altView toggle button
         g:led(x,16, altView and 15 or 2)
     end
+
+    function longpressled(x,y)
+      g:led(x,y, 15 and 8 or 15) -- flip brightness 8->15 or 15->8.
+    end
+
+    function shortpressled(x,y)
+      g:led(x,y,8) -- set brightness to half.
+    end
+
+
       g:refresh()
 end
