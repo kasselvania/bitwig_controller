@@ -35,6 +35,7 @@ function init()
   globalRecordArm = false -- toggles global record for project
   mute_screen = false
   mute_counter = {}
+  mute_held = false
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
@@ -123,41 +124,56 @@ end
 function mute_hold()
   clock.sleep(2)
       mute_held = true
-      print("mute was held")
-        -- mute_setup()
-        mute_count = nil
+      --print("mute was held")
+         mute_setup()
+        clock.cancel(mute_counter)
+        mute_counter = 0
     end
 
 function mute_tap()
-  print("I was tapped")
-      mute_held = false
-      --     mute_setup()
+  --print("I was tapped")
+    mute_held = false
+      mute_counter = 0
+           mute_setup()
  end
 
--- function mute_setup(x,y,z)
---   if mute_held == false and x == 6 and y == 16 and z == 0 then
---   mute_screen = true
---   print("I'm in locked mute screen")
---     else mute_screen = false
---       print("I was tapped")
---     end
---   end
-
-  
+function mute_setup(x,y,z)
+  if mute_held == false then
+  mute_screen = true 
+  print("I was tapped, I'm locked in mute screen")
+  end
+    if mute_held == true then
+      print("I am held, in mute screen until you let go!")
+      mute_screen = true
+  end
+  end
 
 function g.key(x,y,z)
 
-  if x == 6 and y == 16 and z == 1 then -- if a grid key is pressed...
+  if x == 6 and y == 16 and z == 1 and mute_screen == false then -- if a grid key is pressed...
     mute_counter = clock.run(mute_hold) -- start the long press counter for that coordinate!
-  elseif z == 0 then -- otherwise, if a grid key is released...
-    if mute_counter then -- and the long press is still waiting...
-      clock.cancel(mute_counter) -- then cancel the long press clock,
-      if mute_held == true then
+    elseif x==6 and y == 16 and z == 0 then -- otherwise, if a grid key is released...
+      if mute_counter ~=0 then -- and the long press is still waiting...
+        clock.cancel(mute_counter) -- then cancel the long press clock,
+        if mute_held == true then
       else
       mute_tap() -- and execute a short press instead.
-      end
-    end
+      -- end
+     end
   end
+end
+
+if x == 6 and y == 16 and z == 1 and mute_screen == true then
+  mute_screen = false
+  print("I've left mute screen")
+end
+
+if x == 6 and y == 16 and z == 0 and mute_held == true and mute_screen == true then
+  mute_screen = false
+  print("I was held, and now I'm not")
+  mute_held = false
+end
+
 
   if x == 1 and y == 16 and z == 1 then -- this function is the play key
     toggleState = transporton
