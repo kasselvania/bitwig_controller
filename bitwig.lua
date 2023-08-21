@@ -14,12 +14,13 @@ clipID = {}
 trackID = {}
 clipPlay = {}
 bpm = {}
-altView = {}
+arrangementView = {}
 tracktype = {}
 selectedtrack = {}
 armedtracktable = {}
 toggled = {}
 counter = {}
+
 
 Brightness = 0
 
@@ -30,12 +31,18 @@ function init()
   clipState = {} -- this will track the state of if a clip is playing or not This is potentially obsolete.
   scenes = {} -- this holds a table of the available scenes, and assigns them to the appropriate key for launching. It currently does not track the play state
   transporton = false -- This tracks the projects transport state, and will apply a LED state dependant on the incoming OSC messages
-  altView = false -- This starts the script in Session View
+  arrangementView = false -- This starts the script in Session View
   trackarmed = false -- toggle for checking if selected track is armed
   globalRecordArm = false -- toggles global record for project
+
   mute_screen = false
   mute_counter = {}
   mute_held = false
+
+  solo_screen = false
+  solo_counter = {}
+  solo_held = false
+
   
   for i = 1,16 do
       clipState[i] = false -- creates a table for the current state of the clips.
@@ -114,41 +121,93 @@ function alternateView(x,y,z) -- alt view button function. Currently only toggle
   if x == 11 or x == 12 and y == 16 then
       if z ==1 then
         print(x,y)
-        altView = not altView
+        arrangementView = not arrangementView
           else
       end
   end
   gridDirty = true
 end
 
+
+-- Mute State Logic
+
+muteTapped = false
+
+
 function mute_hold()
-  clock.sleep(2)
+  if x == 6 and y == 16 then
+  mute_screen = true
+  print("mute: I am held, in mute screen until you let go!")
+  clock.sleep(0.75)
       mute_held = true
       --print("mute was held")
          mute_setup()
         clock.cancel(mute_counter)
         mute_counter = 0
     end
+  end
+
 
 function mute_tap()
+  -- if x == 6 and y == 16 then
   --print("I was tapped")
     mute_held = false
       mute_counter = 0
            mute_setup()
  end
+-- end
 
 function mute_setup(x,y,z)
   if mute_held == false then
   mute_screen = true 
-  print("I was tapped, I'm locked in mute screen")
+  muteTapped = true
+  print("mute: I was tapped, I'm locked in mute screen")
   end
-    if mute_held == true then
-      print("I am held, in mute screen until you let go!")
-      mute_screen = true
-  end
+  gridDirty = true
   end
 
+-- Solo State Logic
+
+soloTapped = false
+
+  function solo_hold()
+    if x == 8 and y == 16 then
+    solo_screen = true
+    print("solo: I am held, in solo screen until you let go!")
+    clock.sleep(0.75)
+        solo_held = true
+        --print("mute was held")
+           solo_setup()
+          clock.cancel(solo_counter)
+          solo_counter = 0
+      end
+    end
+  
+  function solo_tap()
+    -- if x == 8 and y == 16 then
+    --print("I was tapped")
+      solo_held = false
+        solo_counter = 0
+             solo_setup()
+   end
+  -- end
+  
+  function solo_setup(x,y,z)
+    if solo_held == false then
+    solo_screen = true 
+    soloTapped = true
+    print("solo: I was tapped, I'm locked in solo screen")
+    end
+    gridDirty = true
+    end
+
+
+
+
+
 function g.key(x,y,z)
+
+  -- Mute Key Logic
 
   if x == 6 and y == 16 and z == 1 and mute_screen == false then -- if a grid key is pressed...
     mute_counter = clock.run(mute_hold) -- start the long press counter for that coordinate!
@@ -161,10 +220,12 @@ function g.key(x,y,z)
       -- end
      end
   end
+  gridDirty = true
 end
 
-if x == 6 and y == 16 and z == 1 and mute_screen == true then
+if x == 6 and y == 16 and z == 1 and mute_screen == true and muteTapped == true then
   mute_screen = false
+  muteTapped = false
   print("I've left mute screen")
 end
 
@@ -172,6 +233,34 @@ if x == 6 and y == 16 and z == 0 and mute_held == true and mute_screen == true t
   mute_screen = false
   print("I was held, and now I'm not")
   mute_held = false
+end
+
+-- solo key logic
+
+if x == 8 and y == 16 and z == 1 and solo_screen == false then -- if a grid key is pressed...
+  solo_counter = clock.run(solo_hold) -- start the long press counter for that coordinate!
+  elseif x==8 and y == 16 and z == 0 then -- otherwise, if a grid key is released...
+    if solo_counter ~=0 then -- and the long press is still waiting...
+      clock.cancel(solo_counter) -- then cancel the long press clock,
+      if solo_held == true then
+    else
+    solo_tap() -- and execute a short press instead.
+    -- end
+   end
+end
+gridDirty = true
+end
+
+if x == 8 and y == 16 and z == 1 and solo_screen == true and soloTapped == true then
+solo_screen = false
+soloTapped = false
+print("I've left solo screen")
+end
+
+if x == 8 and y == 16 and z == 0 and solo_held == true and solo_screen == true then
+solo_screen = false
+print("I was held, and now I'm not")
+solo_held = false
 end
 
 
@@ -221,7 +310,7 @@ end
   end
 
 
-  if altView then -- currently, alt arrows bellow are the same.
+  if arrangementView then -- currently, alt arrows bellow are the same.
     processArrowKeysalt(x, y, z)
   else
     processArrowKeys(x, y, z)
@@ -316,12 +405,6 @@ function osc_in(path, args, from)
         end
       end
 
-  
--- local currentBPM = string.find(path, "/tempo/raw")
---     if currentBPM then
---         local bpmarg = tonumber(args[1])
---         bpm = bpmarg
---     end
   
 local pattern = "/track/(%d+)/clip/(%d+)/hasContent"    -- Extract track and clip number for existing clips
     local track, clip = path:match(pattern)
@@ -469,23 +552,15 @@ function grid_init() -- initial grid initiation. Should be envoked when swapping
   g:refresh()
 end
 
--- function trackselected()
---   for x = 2,16 do
---     for y = 1,14 do
---       if selectedtrack [x][y] = true then
---         if clipGrid[x][y] = true then
---           g:led(x,y,10)
---         else
---           g:led(x,y,1)
---         end
---       end
---     end
---   end
--- end
 
-function clipdraw ()
 
-    for x = 2,16 do
+function SessionClipDraw()
+
+  for i = 1,14 do -- scene drawing
+    g:led(1,i,scenes[i] and 15 or 15)
+end
+
+    for x = 2,16 do -- track folder draw
       for y= 1,14 do 
         if tracktype[x][y] == true then
         g:led(x,y,7)
@@ -579,9 +654,24 @@ function clipdraw ()
       end
     end
 
-function grid_redraw()
-  drawNavigationArrows() -- arrow keys
+    function muteLEDToggle()
+      if mute_screen == false then
+        g:led(6,16,4)
+      else g:led (6,16,9)
+    end
+  end
 
+  function soloLEDToggle()
+    if solo_screen == false then
+      g:led(8,16,4)
+    else g:led (8,16,9)
+  end
+end
+
+
+function grid_redraw()
+  
+  drawNavigationArrows() -- arrow keys
 
    if transporton == true then -- play button
       g:led(1,16,Brightness)
@@ -595,13 +685,6 @@ function grid_redraw()
       g:led(3,16,4)
     end
 
-
-  clipdraw()
-
-    for i = 1,14 do -- scene drawing
-        g:led(1,i,scenes[i] and 15 or 15)
-    end
-
     if trackarmed == false then -- track arm key
       g:led(4,16,4)
     else
@@ -609,17 +692,14 @@ function grid_redraw()
     end
       
     for x = 11, 12 do -- altView toggle button
-        g:led(x,16, altView and 15 or 2)
+        g:led(x,16, arrangementView and 15 or 2)
     end
 
-    function longpressled(x,y)
-      g:led(x,y, 15 and 8 or 15) -- flip brightness 8->15 or 15->8.
-    end
+    muteLEDToggle()
 
-    function shortpressled(x,y)
-      g:led(x,y,8) -- set brightness to half.
-    end
+    soloLEDToggle()
 
+    SessionClipDraw()
 
       g:refresh()
 end
