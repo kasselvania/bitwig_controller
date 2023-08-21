@@ -134,18 +134,18 @@ end
 muteTapped = false
 
 
-function mute_hold()
-  if x == 6 and y == 16 then
+function mute_hold(x,y,z)
+  -- if x == 6 and y == 16 and z == 1 then
   mute_screen = true
-  print("mute: I am held, in mute screen until you let go!")
   clock.sleep(0.75)
       mute_held = true
       --print("mute was held")
          mute_setup()
         clock.cancel(mute_counter)
         mute_counter = 0
+        print("mute: I am held, in mute screen until you let go!")
     end
-  end
+  -- end
 
 
 function mute_tap()
@@ -157,7 +157,7 @@ function mute_tap()
  end
 -- end
 
-function mute_setup(x,y,z)
+function mute_setup()
   if mute_held == false then
   mute_screen = true 
   muteTapped = true
@@ -171,17 +171,15 @@ function mute_setup(x,y,z)
 soloTapped = false
 
   function solo_hold()
-    if x == 8 and y == 16 then
     solo_screen = true
-    print("solo: I am held, in solo screen until you let go!")
     clock.sleep(0.75)
         solo_held = true
         --print("mute was held")
            solo_setup()
           clock.cancel(solo_counter)
           solo_counter = 0
+          print("solo: I am held, in solo screen until you let go!")
       end
-    end
   
   function solo_tap()
     -- if x == 8 and y == 16 then
@@ -192,7 +190,7 @@ soloTapped = false
    end
   -- end
   
-  function solo_setup(x,y,z)
+  function solo_setup()
     if solo_held == false then
     solo_screen = true 
     soloTapped = true
@@ -209,9 +207,9 @@ function g.key(x,y,z)
 
   -- Mute Key Logic
 
-  if x == 6 and y == 16 and z == 1 and mute_screen == false then -- if a grid key is pressed...
+  if x == 6 and y == 16 and z == 1 and mute_screen == false and solo_screen == false then -- if a grid key is pressed...
     mute_counter = clock.run(mute_hold) -- start the long press counter for that coordinate!
-    elseif x==6 and y == 16 and z == 0 then -- otherwise, if a grid key is released...
+    elseif x==6 and y == 16 and z == 0 and solo_screen == false then -- otherwise, if a grid key is released...
       if mute_counter ~=0 then -- and the long press is still waiting...
         clock.cancel(mute_counter) -- then cancel the long press clock,
         if mute_held == true then
@@ -235,11 +233,11 @@ if x == 6 and y == 16 and z == 0 and mute_held == true and mute_screen == true t
   mute_held = false
 end
 
--- solo key logic
+-- -- solo key logic
 
-if x == 8 and y == 16 and z == 1 and solo_screen == false then -- if a grid key is pressed...
+if x == 8 and y == 16 and z == 1 and solo_screen == false and mute_screen == false then -- if a grid key is pressed...
   solo_counter = clock.run(solo_hold) -- start the long press counter for that coordinate!
-  elseif x==8 and y == 16 and z == 0 then -- otherwise, if a grid key is released...
+  elseif x==8 and y == 16 and z == 0 and mute_screen == false then -- otherwise, if a grid key is released...
     if solo_counter ~=0 then -- and the long press is still waiting...
       clock.cancel(solo_counter) -- then cancel the long press clock,
       if solo_held == true then
